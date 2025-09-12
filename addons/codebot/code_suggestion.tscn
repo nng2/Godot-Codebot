@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3 uid="uid://baklnra65sk8v"]
+
+[ext_resource type="Texture2D" uid="uid://i2clnne36soh" path="res://addons/codebot/copy_icon.png" id="1_75h8t"]
+
+[node name="CodeSuggestion" type="HBoxContainer"]
+custom_minimum_size = Vector2(0, 32)
+
+[node name="Add" type="Button" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Add"
+
+[node name="Copy" type="Button" parent="."]
+custom_minimum_size = Vector2(32, 0)
+layout_mode = 2
+icon = ExtResource("1_75h8t")
+expand_icon = true

@@ -1,0 +1,5 @@
+# Godot 4+ specific ignores
+.godot/
+addons/codebot/setting.env
+addons/codebot/convo.dat
+/android/

@@ -1,0 +1,84 @@
+[gd_scene load_steps=6 format=3 uid="uid://ifsf7ophrixo"]
+
+[ext_resource type="PackedScene" uid="uid://gj81krdio0h4" path="res://addons/codebot/reply.tscn" id="1_crjgk"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qq6ps"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_crjgk"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.0862745, 0.117647, 0.160784, 1)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qq6ps"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0.0862745, 0.117647, 0.160784, 1)
+draw_center = false
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xf6la"]
+content_margin_left = 16.0
+content_margin_top = 8.0
+content_margin_right = 16.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 32
+corner_radius_top_right = 32
+corner_radius_bottom_right = 32
+corner_radius_bottom_left = 32
+
+[node name="Codebot" type="PanelContainer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_qq6ps")
+
+[node name="Codebot" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="ScrollContainer" type="ScrollContainer" parent="Codebot"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 3
+vertical_scroll_mode = 3
+
+[node name="Messages" type="VBoxContainer" parent="Codebot/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="Reply" parent="Codebot/ScrollContainer/Messages" instance=ExtResource("1_crjgk")]
+layout_mode = 2
+
+[node name="Input" type="TextEdit" parent="Codebot"]
+clip_contents = false
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_colors/caret_color = Color(1, 1, 1, 1)
+theme_override_constants/caret_width = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_crjgk")
+theme_override_styles/focus = SubResource("StyleBoxFlat_qq6ps")
+theme_override_styles/read_only = SubResource("StyleBoxFlat_xf6la")
+placeholder_text = "What's wrong with this function?"
+wrap_mode = 1
+scroll_fit_content_height = true

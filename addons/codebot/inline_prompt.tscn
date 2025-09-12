@@ -1,0 +1,25 @@
+[gd_scene load_steps=2 format=3 uid="uid://wmwmxkjhvxsj"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cg1r4"]
+content_margin_left = 8.0
+content_margin_top = 2.0
+content_margin_right = 8.0
+content_margin_bottom = 2.0
+bg_color = Color(0.0862745, 0.117647, 0.160784, 1)
+
+[node name="InlinePrompt" type="VBoxContainer"]
+custom_minimum_size = Vector2(500, 0)
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Title" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_cg1r4")
+
+[node name="Label" type="Label" parent="Title"]
+layout_mode = 2
+text = "Query:"
+
+[node name="Prompt" type="LineEdit" parent="."]
+layout_mode = 2
