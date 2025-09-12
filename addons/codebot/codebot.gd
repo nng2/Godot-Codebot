@@ -77,6 +77,7 @@ func _enter_tree() -> void:
 		message_list.get_node("Reply/Message").text = "Hello there!"
 	
 	EditorInterface.get_script_editor().get_current_editor().get_base_editor().gui_input.connect(free_inline_prompt)
+	context_plugin.popup_requested.connect(free_inline_prompt)
 	
 	# Load conversation from disc
 	if FileAccess.file_exists("res://addons/codebot/convo.dat"):
@@ -605,6 +606,7 @@ func free_inline_prompt(event : InputEvent) -> void: if event is InputEventMouse
 
 ## Handles a debugging request
 func debug_requested(args) -> void:
+	if inline_prompt != null: inline_prompt.queue_free()
 	inline_prompt = load("res://addons/codebot/inline_prompt.tscn").instantiate()
 	var editor : CodeEdit = EditorInterface.get_script_editor().get_current_editor().get_base_editor()
 	editor.add_child(inline_prompt)
@@ -617,6 +619,7 @@ func debug_requested(args) -> void:
 
 ## Handles a function creation request
 func function_requested(args) -> void:
+	if inline_prompt != null: inline_prompt.queue_free()
 	inline_prompt = load("res://addons/codebot/inline_prompt.tscn").instantiate()
 	var editor : CodeEdit = EditorInterface.get_script_editor().get_current_editor().get_base_editor()
 	editor.add_child(inline_prompt)
@@ -645,22 +648,15 @@ func debug_request_submitted(request : String, selected_text : String) -> void:
 	var editor : CodeEdit = EditorInterface.get_script_editor().get_current_editor().get_base_editor()
 	var edited_script_name := edited_script.resource_path
 	var selection_start_line = editor.get_selection_origin_line()
-	var selection_start_col = editor.get_selection_origin_column()
-	var selection_caret_line = editor.get_caret_line()
-	var selection_caret_col = editor.get_caret_column()
 	
 	var suggestion = await code_receieved
 	
-	if edited_script != null and editor != null and selected_text != "":
+	if edited_script != null and editor != null and selected_text != "" and editor.text.contains(selected_text):
 		var lines_in_suggestion = suggestion.count("\n") # Number of lines in the AI's suggested code
 		var folds = editor.get_folded_lines() # List of currently folded lines
 		var scroll = editor.scroll_vertical # Current vertical scroll position
 		
-		editor.select(selection_start_line, selection_start_col, selection_caret_line, selection_caret_col)
-		editor.delete_selection()
-		editor.set_caret_line(selection_start_line)
-		editor.set_caret_column(selection_start_col)
-		editor.insert_text_at_caret(suggestion)
+		editor.text = editor.text.replace(selected_text, suggestion)
 		
 		print("[Codebot] Script updated!")
 		
