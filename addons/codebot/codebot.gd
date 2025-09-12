@@ -196,7 +196,7 @@ func make_query(query : String, add_chat : bool = true) -> void:
 						},
 						"data": {
 							"type": "STRING",
-							"description": "The function code if the action represents a function. If the action represents creating a new script or scene this is the newly created file's contents. If an existing node is to be modified, this is a JSON.stringified dictionary with {property_name : value} pairs, (Format vectors/colors/etc. like so: '(val1, val2, val3...)'). If a new node is to be added to an existing scene, this will be .tscn data to be directly appended to the currently edited scene file, make sure it includes all necessary instructions required to create the requested node and it's children, (don't forget to correctly set the new nodes' 'parent')."
+							"description": "The function code if the action represents a function. If the action represents creating a new script or scene this is the newly created file's contents (Do NOT under any circumstances attempt to attach scripts to nodes). If an existing node is to be modified, this is a JSON.stringified dictionary with {property_name : value} pairs, (Format vectors/colors/etc. like so: '(val1, val2, val3...)'). If a new node is to be added to an existing scene, this will be .tscn data to be directly appended to the currently edited scene file, make sure it includes all necessary instructions required to create the requested node and it's children, (don't forget to correctly set the new nodes' 'parent')."
 						}
 					},
 					"required": ["action_type", "name_path", "data"],
@@ -487,9 +487,10 @@ func build_scene_from_string(data : String, path : String) -> void:
 						new_resource.set(pair[0], pair[1])
 		elif instruction_header.left(13) == "[ext_resource":
 			var details = Array(instruction_header.split(" "))
-			var resource_path = details[3].split('"')[1]
-			var resource_id = details[4].split('"')[1]
-			ext_resources[resource_id] = resource_path
+			if details.size() == 5:
+				var resource_path = details[3].split('"')[1]
+				var resource_id = details[4].split('"')[1]
+				ext_resources[resource_id] = resource_path
 	
 	# Create new nodes
 	for instruction_set in new_scene_data:
@@ -521,44 +522,45 @@ func build_scene_from_string(data : String, path : String) -> void:
 			
 			# Create node
 			var new_node = ClassDB.instantiate(node_type)
-			new_node.name = node_name
-			if new_root == null: new_root = new_node
-			else:
-				if !new_root.has_node(node_parent):
-					node_parent = new_root.find_child(node_parent)
-					if node_parent != null: node_parent = new_root.get_path_to(node_parent)
-				if node_parent != null and new_root.has_node(node_parent):
-					new_root.get_node(node_parent).add_child(new_node)
-					new_node.owner = new_root
-					
-					# Set node parameters
-					for p in parameters:
-						var pair := Array(p.split(" = "))
-						if pair.size() == 2:
-							if len(pair[1]) > 12 and pair[1].left(12) == "SubResource(":
-								var target = Array(pair[1].split('"'))
-								if target.size() == 3 and sub_resources.has(target[1]):
-									new_node.set(pair[0], sub_resources[target[1]])
-							elif len(pair[1]) > 12 and pair[1].left(12) == "ExtResource(":
-								var target = Array(pair[1].split('"'))
-								if target.size() == 3 and ext_resources.has(target[1]):
-									new_node.set(pair[0], load(ext_resources[target[1]]))
-							else:
-								var value_type = type_string(typeof(pair[1]))
-								if pair[1] is String:
-									var value = pair[1]
-									if value.left(1) == "(": value = value_type + value
-									var result = str_to_var(value)
-									new_node.set(pair[0], result)
-								elif pair[1] is Dictionary:
-									var node_prop = new_node.get(pair[0])
-									for prop in pair[1]:
-										node_prop[prop] = pair[1][prop]
-									new_node.set(pair[0], node_prop)
+			if new_node is Node:
+				new_node.name = StringName(node_name)
+				if new_root == null: new_root = new_node
+				else:
+					if !new_root.has_node(node_parent):
+						node_parent = new_root.find_child(node_parent)
+						if node_parent != null: node_parent = new_root.get_path_to(node_parent)
+					if node_parent != null and new_root.has_node(node_parent):
+						new_root.get_node(node_parent).add_child(new_node)
+						new_node.owner = new_root
+						
+						# Set node parameters
+						for p in parameters:
+							var pair := Array(p.split(" = "))
+							if pair.size() == 2:
+								if len(pair[1]) > 12 and pair[1].left(12) == "SubResource(":
+									var target = Array(pair[1].split('"'))
+									if target.size() == 3 and sub_resources.has(target[1]):
+										new_node.set(pair[0], sub_resources[target[1]])
+								elif len(pair[1]) > 12 and pair[1].left(12) == "ExtResource(":
+									var target = Array(pair[1].split('"'))
+									if target.size() == 3 and ext_resources.has(target[1]):
+										new_node.set(pair[0], load(ext_resources[target[1]]))
 								else:
-									new_node.set(pair[0], pair[1])
-				else: push_error("[Codebot] Error creating new node at " + str(node_parent))
-	
+									var value_type = type_string(typeof(pair[1]))
+									if pair[1] is String:
+										var value = pair[1]
+										if value.left(1) == "(": value = value_type + value
+										var result = str_to_var(value)
+										new_node.set(pair[0], result)
+									elif pair[1] is Dictionary:
+										var node_prop = new_node.get(pair[0])
+										for prop in pair[1]:
+											node_prop[prop] = pair[1][prop]
+										new_node.set(pair[0], node_prop)
+									else:
+										new_node.set(pair[0], pair[1])
+					else: push_error("[Codebot] Error creating new node at " + str(node_parent))
+		
 	# Pack scene
 	if new_root != null:
 		var packed_scene := PackedScene.new()
