@@ -77,7 +77,7 @@ func _enter_tree() -> void:
 		message_list.get_node("Reply/Message").text = "Hello there!"
 	
 	EditorInterface.get_script_editor().get_current_editor().get_base_editor().gui_input.connect(free_inline_prompt)
-	context_plugin.popup_requested.connect(free_inline_prompt)
+	context_plugin.popup_requested.connect(free_inline_prompt.bind(InputEventMouseButton.new()))
 	
 	# Load conversation from disc
 	if FileAccess.file_exists("res://addons/codebot/convo.dat"):
@@ -401,7 +401,7 @@ func handle_query_response(data : Dictionary, reply : RichTextLabel) -> void:
 			}]
 		})
 		
-		reply.text = "Done!"
+		reply.text = response_data.text
 		for i in range(20):
 			await get_tree().process_frame
 			dock.get_node("Codebot/ScrollContainer").scroll_vertical = message_list.size.y+16
