@@ -69,8 +69,8 @@ func _enter_tree() -> void:
 		"hint": PROPERTY_HINT_NONE
 	})
 	
-	if FileAccess.file_exists("res://addons/codebot/setting.env"):
-		ProjectSettings.set_setting("Codebot/API/API Key", FileAccess.get_file_as_string("res://addons/codebot/setting.env"))
+	if FileAccess.file_exists("user://setting.env"):
+		ProjectSettings.set_setting("Codebot/API/API Key", FileAccess.get_file_as_string("user://setting.env"))
 	
 	ProjectSettings.settings_changed.connect(_check_key)
 	if ProjectSettings.get_setting("Codebot/API/API Key") != "":
@@ -101,7 +101,7 @@ func _enter_tree() -> void:
 
 ## Checks for updated API key
 func _check_key() -> void:
-	var file = FileAccess.open("res://addons/codebot/setting.env", FileAccess.WRITE)
+	var file = FileAccess.open("user://setting.env", FileAccess.WRITE)
 	file.store_string(ProjectSettings.get_setting("Codebot/API/API Key"))
 	file.close()
 	if ProjectSettings.get_setting("Codebot/API/API Key") != "":
