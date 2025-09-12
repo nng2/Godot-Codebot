@@ -338,13 +338,16 @@ func handle_query_response(data : Dictionary, reply : RichTextLabel) -> void:
 					suggestion.get_node("Add").pressed.connect(_add_function.bind(action.data))
 					suggestion.get_node("Copy").pressed.connect(_copy_function.bind(action.data))
 				"script":
-					if action.name_path.right(3) != ".gd": action.name_path += ".gd"
-					var file = FileAccess.open(action.name_path, FileAccess.WRITE)
-					file.store_string(action.data)
-					file.close()
-					EditorInterface.get_resource_filesystem().scan()
-					print("[Codebot] I created a new script for you: " + action.name_path)
-					EditorInterface.edit_script(load(action.name_path))
+					if FileAccess.file_exists(action.name_path):
+						push_error("[Codebot] Tried to create new script, but script already exists!")
+					else:
+						if action.name_path.right(3) != ".gd": action.name_path += ".gd"
+						var file = FileAccess.open(action.name_path, FileAccess.WRITE)
+						file.store_string(action.data)
+						file.close()
+						EditorInterface.get_resource_filesystem().scan()
+						print("[Codebot] I created a new script for you: " + action.name_path)
+						EditorInterface.edit_script(load(action.name_path))
 				"scene":
 					build_scene_from_string(action.data, action.name_path)
 				"modify":
