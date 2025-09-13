@@ -181,14 +181,14 @@ func make_query(query : String, add_chat : bool = true) -> void:
 			},
 			"actions": {
 				"type": "ARRAY",
-				"description": "A list of actions requested to resolve the user's query",
+				"description": "A list of actions requested to resolve the user's query. Only suggest actions if you are confident that they are required to answer the user's query.",
 				"items": {
 					"type": "OBJECT",
 					"description": "A single action suggested to resolve the user's query",
 					"properties": {
 						"action_type": {
 							"type": "STRING",
-							"description": "The type of action suggested. Use 'function' to represent a single function, use 'script' for creating new .gd files, and use 'scene' for creating new .tscn scenes. Use 'modify' if you're changing an existing node's properties. Use add_node if you're adding a single node to an existing scene.",
+							"description": "The type of action suggested. Use 'function' to represent a single function, use 'script' for creating new .gd files, and use 'scene' for creating new .tscn scenes. Use 'modify' if you're changing the properties of an existing node in an existing scene. Use add_node if you're adding a single node to an existing scene.",
 							"enum": ["function", "script", "scene", "modify", "add_node"]
 						},
 						"name_path": {
@@ -240,7 +240,7 @@ func make_query(query : String, add_chat : bool = true) -> void:
 				"text": "
 				You are a GDscript expert responding to queries regarding Godot 4.
 				Your name is Codebot and your purpose is to help users debug code and solve other challenges that may present themselves during development.
-				You have the ability to create or modify scripts and scenes.
+				You have the ability to create or modify scripts and scenes, but do NOT attempt to do so unless specifically asked..
 				Be succinct and to the point unless otherwise instructed.
 				Look at the currently edited scene/script of the user first if they ask for help as they'll likely be needed help on something they're currently working on.
 				Also make sure to follow any existing indentation practices.\n\n
@@ -344,11 +344,12 @@ func handle_query_response(data : Dictionary, reply : RichTextLabel) -> void:
 					else:
 						if action.name_path.right(3) != ".gd": action.name_path += ".gd"
 						var file = FileAccess.open(action.name_path, FileAccess.WRITE)
-						file.store_string(action.data)
-						file.close()
-						EditorInterface.get_resource_filesystem().scan()
-						print("[Codebot] I created a new script for you: " + action.name_path)
-						EditorInterface.edit_script(load(action.name_path))
+						if file != null:
+							file.store_string(action.data)
+							file.close()
+							EditorInterface.get_resource_filesystem().scan()
+							print("[Codebot] I created a new script for you: " + action.name_path)
+							EditorInterface.edit_script(load(action.name_path))
 				"scene":
 					build_scene_from_string(action.data, action.name_path)
 				"modify":
