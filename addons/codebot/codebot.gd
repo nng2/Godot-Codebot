@@ -56,6 +56,7 @@ func _enter_tree() -> void:
 	dock = preload("res://addons/codebot/code_bot.tscn").instantiate()
 	query_input = dock.get_node("Codebot/Input")
 	message_list = dock.get_node("Codebot/ScrollContainer/Messages")
+	dock.get_node("Clear").connect("pressed", clear_conversation)
 	dock.gui_input.connect(_input_deselected)
 	add_control_to_dock(EditorPlugin.DOCK_SLOT_LEFT_BR, dock)
 	dock.show()
@@ -98,6 +99,14 @@ func _enter_tree() -> void:
 		for i in range(20):
 			await get_tree().process_frame
 			dock.get_node("Codebot/ScrollContainer").scroll_vertical = message_list.size.y+16
+
+
+## Clears the conversation history
+func clear_conversation() -> void:
+	conversation = []
+	for i in range(dock.get_node("Codebot/ScrollContainer/Messages").get_child_count()-1):
+		dock.get_node("Codebot/ScrollContainer/Messages").get_child(1+i).queue_free()
+	print("[Codebot] Cache cleared!")
 
 
 ## Checks for updated API key
@@ -173,38 +182,94 @@ func make_query(query : String, add_chat : bool = true) -> void:
 	})
 	var schema := {
 		"type": "OBJECT",
-		"description": "An object containing details about the response to a query. If the query requests a single function, put the code in the 'function' property, if the query requests creating an entirely new script, put the code in the 'script' property.",
+		"description": "An object containing details about the response to a query.",
 		"properties": {
 			"text": {
 				"type": "STRING",
-				"description": "The text only portion of the response to the user's query. This will go in a text chat that the user will read."
+				"description": "The text only portion of the response to the user's query. This will go in a text chat that the user will read so make sure it's concise and to the point."
 			},
-			"actions": {
+			"function": {
+				"type": "OBJECT",
+				"description": "A singular new function requested by the user, if any.",
+				"properties": {
+					"name": {
+						"type": "STRING",
+						"description": "The name of the function."
+					},
+					"code": {
+						"type": "STRING",
+						"description": "The code of the function requested by the user."
+					}
+				},
+				"required": ["name", "code"]
+			},
+			"scripts": {
 				"type": "ARRAY",
-				"description": "A list of actions requested to resolve the user's query. Only suggest actions if you are confident that they are required to answer the user's query.",
+				"description": "A list of new gdscript files requested by the user, if any.",
 				"items": {
 					"type": "OBJECT",
-					"description": "A single action suggested to resolve the user's query",
+					"description": "An object containing details about a new gdscript file.",
 					"properties": {
-						"action_type": {
+						"filepath": {
 							"type": "STRING",
-							"description": "The type of action suggested. Use 'function' to represent a single function, use 'script' for creating new .gd files, and use 'scene' for creating new .tscn scenes. Use 'modify' if you're changing the properties of an existing node in an existing scene. Use add_node if you're adding a single node to an existing scene.",
-							"enum": ["function", "script", "scene", "modify", "add_node"]
+							"description": "The filepath to the new gdscript file to be created."
 						},
-						"name_path": {
+						"source_code": {
 							"type": "STRING",
-							"description": "The name of a function if the action represents a function. If the action represents creating a new script or scene, this is the path to the new file respecting the current filesystem, ensuring no new directories need to be created. If the action is to modify a node, this is the nodepath to that node being modified. If adding a new node to an existing scene, this is the path to the .tscn file of the currently edited scene."
-						},
-						"data": {
-							"type": "STRING",
-							"description": "The function code if the action represents a function. If the action represents creating a new script or scene this is the newly created file's contents (Do NOT under any circumstances attempt to attach scripts to nodes). If an existing node is to be modified, this is a JSON.stringified dictionary with {property_name : value} pairs, (Format vectors/colors/etc. like so: '(val1, val2, val3...)'). If a new node is to be added to an existing scene, this will be .tscn data to be directly appended to the currently edited scene file, make sure it includes all necessary instructions required to create the requested node and it's children, (don't forget to correctly set the new nodes' 'parent')."
+							"description": "The source code of the new gdscript file to be created. Make sure to use the same indentation type as other script files."
 						}
 					},
-					"required": ["action_type", "name_path", "data"],
+					"required": ["filepath", "source_code"]
 				}
-			}
+			},
+			"scenes": {
+				"type": "ARRAY",
+				"description": "A list of NEW tscn scene files requested by the user, if any. If the user requested to modify part of a scene, use the modifications field instead.",
+				"items": {
+					"type": "OBJECT",
+					"description": "An object containing details about a new tscn scene file.",
+					"properties": {
+						"filepath": {
+							"type": "STRING",
+							"description": "The filepath to the new tscn scene file to be created."
+						},
+						"contents": {
+							"type": "STRING",
+							"description": "The tscn file contents of the new tscn scene file to be created."
+						}
+					},
+					"required": ["filepath", "contents"]
+				}
+			},
+			"modifications": {
+				"type": "ARRAY",
+				"description": "A list of modifications requested by the user. These are used for setting properties on nodes or creating new nodes if there is not a node at the specified nodepath. If the node referenced doesn't exist, it will be created with the given type (Do NOT attempt to create nodes by modifying the 'children' property of the parent, you MUST create the child node directly). (Moving nodes, changing modulate colors, setting scale, etc.)",
+				"items": {
+					"type": "OBJECT",
+					"description": "An object containing modifications to a singular node in a scene.",
+					"properties": {
+						"scenepath": {
+							"type": "STRING",
+							"description": "The path to the tscn scene file in the filesystem the modified node belongs to."
+						},
+						"nodepath": {
+							"type": "STRING",
+							"description": "The nodepath to the node to be modified relative to the scene root. If creating a new node this should be the path to the node to be created."
+						},
+						"nodetype": {
+							"type": "STRING",
+							"description": "The type of the node modified."
+						},
+						"properties": {
+							"type": "STRING",
+							"description": "A JSON.stringified dictionary with {property_name : value} pairs to change, (Format vectors/colors/etc. like so: '(val1, val2, val3...)'). Nodes do NOT have a children property, the can NOT be used for creating new nodes."
+						}
+					},
+					"required": ["scenepath", "nodepath", "nodetype", "properties"]
+				}
+			},
 		},
-		"required": ["text", "actions"]
+		"required": ["text"]
 	}
 	if response_action == 1 or response_action == 2:
 		schema = {
@@ -240,10 +305,7 @@ func make_query(query : String, add_chat : bool = true) -> void:
 				"text": "
 				You are a GDscript expert responding to queries regarding Godot 4.
 				Your name is Codebot and your purpose is to help users debug code and solve other challenges that may present themselves during development.
-				You have the ability to create or modify scripts and scenes, but do NOT attempt to do so unless specifically asked..
-				Be succinct and to the point unless otherwise instructed.
 				Look at the currently edited scene/script of the user first if they ask for help as they'll likely be needed help on something they're currently working on.
-				Also make sure to follow any existing indentation practices.\n\n
 				Here is a JSON.stringified description of the user's project, scenes and scripts are {filename : filecontents} pairs:\n\n" + project_description
 			}]
 		},
@@ -324,62 +386,101 @@ func handle_query_response(data : Dictionary, reply : RichTextLabel) -> void:
 	while response[len(response)-1] != "}" and len(response) > 2: response = response.substr(0, len(response)-1)
 	response_data = JSON.parse_string(response)
 	
-	if response_action == 0 and response_data is Dictionary and response_data.has("text") and response_data.has("actions"):
+	if response_action == 0 and response_data is Dictionary and response_data.has("text"):
 		var text = response_data.text
-		var actions = response_data.actions
 		
-		for action in actions: if action.data != null and action.data != "":
-			match(action.action_type):
-				"function":
-					var suggestion = preload("res://addons/codebot/code_suggestion.tscn").instantiate()
-					message_list.add_child(suggestion)
-					if action.name_path.right(2) == "()": suggestion.get_node("Add").text = "Add " + action.name_path
-					else: suggestion.get_node("Add").text = "Add " + action.name_path + "()"
-					suggestion.get_node("Copy").tooltip_text = action.data
-					suggestion.get_node("Add").pressed.connect(_add_function.bind(action.data))
-					suggestion.get_node("Copy").pressed.connect(_copy_function.bind(action.data))
-				"script":
-					if FileAccess.file_exists(action.name_path):
-						push_error("[Codebot] Tried to create new script, but script already exists!")
-					else:
-						if action.name_path.right(3) != ".gd": action.name_path += ".gd"
-						var file = FileAccess.open(action.name_path, FileAccess.WRITE)
+		# Handle function suggestion
+		if response_data.has("function"):
+			var new_function = response_data.function
+			var suggestion = preload("res://addons/codebot/code_suggestion.tscn").instantiate()
+			message_list.add_child(suggestion)
+			if new_function.name.right(2) == "()": suggestion.get_node("Add").text = "Add " + new_function.name
+			else: suggestion.get_node("Add").text = "Add " + new_function.name + "()"
+			suggestion.get_node("Copy").tooltip_text = new_function.code
+			suggestion.get_node("Add").pressed.connect(_add_function.bind(new_function.code))
+			suggestion.get_node("Copy").pressed.connect(_copy_function.bind(new_function.code))
+		
+		# Handle script suggestions
+		if response_data.has("scripts"):
+			for script in response_data.scripts:
+				if FileAccess.file_exists(script.filepath):
+					push_error("[Codebot] Tried to create new script, but script already exists!")
+				else:
+					if script.filepath.left(6) == "res://":
+						create_directories(script.filepath)
+						var file = FileAccess.open(script.filepath, FileAccess.WRITE)
 						if file != null:
-							file.store_string(action.data)
+							file.store_string(script.source_code)
 							file.close()
 							EditorInterface.get_resource_filesystem().scan()
-							print("[Codebot] I created a new script for you: " + action.name_path)
-							EditorInterface.edit_script(load(action.name_path))
-				"scene":
-					build_scene_from_string(action.data, action.name_path)
-				"modify":
-					var root = EditorInterface.get_edited_scene_root()
-					var node_to_modify = null
-					if action.name_path.contains("::"): action.name_path = action.name_path.split("::")[1].substr(1)
-					if action.name_path.left(6) == "/root/": action.name_path = action.name_path.substr(6)
-					if action.name_path.left(len(root.name)) == root.name: action.name_path = action.name_path.substr(len(root.name)+1)
-					if root.has_node(action.name_path): node_to_modify = root.get_node(action.name_path)
-					if node_to_modify != null:
-						var props = JSON.parse_string(action.data)
-						if props is Dictionary:
-							for key in props:
-								var value_type = type_string(typeof(node_to_modify.get(key)))
-								if props[key] is String:
-									var value = props[key]
-									if value.left(1) == "(": value = value_type + value
-									var result = str_to_var(value)
-									if typeof(result) == typeof(node_to_modify.get(key)):
-										node_to_modify.set(key, result)
-								elif props[key] is Dictionary:
-									var node_prop = node_to_modify.get(key)
-									for prop in props[key]:
-										node_prop[prop] = props[key][prop]
-									node_to_modify.set(key, node_prop)
-								else:
-									node_to_modify.set(key, props[key])
-							print("[Codebot] Modified node " + action.name_path)
-				"add_node":
-					build_scene_from_string(action.data, EditorInterface.get_edited_scene_root().scene_file_path)
+							print("[Codebot] I created a new script for you: " + script.filepath)
+							EditorInterface.edit_script(load(script.filepath))
+						else:
+							push_error("[Codebot] Error creating new script!")
+		
+		# Handle scene suggestions
+		if response_data.has("scenes"):
+			for new_scene in response_data.scenes:
+				if FileAccess.file_exists(new_scene.filepath):
+					push_error("[Codebot] Tried to create new scene, but scene already exists!")
+				else:
+					if new_scene.filepath.left(6) == "res://":
+						create_directories(new_scene.filepath)
+						build_scene_from_string(new_scene.contents, new_scene.filepath)
+		
+		# Handle scene modifications / node creations
+		if response_data.has("modifications"):
+			var scene_path = EditorInterface.get_edited_scene_root().scene_file_path
+			#var root = load(scene_path).instantiate()
+			var root = EditorInterface.get_edited_scene_root()
+			
+			for modification in response_data.modifications:
+				if modification.scenepath != scene_path: continue
+				
+				var node_to_modify = null
+				if modification.scenepath == modification.nodepath or modification.nodepath == root.name:
+					node_to_modify = root
+				else:
+					if modification.nodepath.left(5) == "root/": modification.nodepath = modification.nodepath.substr(5)
+					if modification.nodepath.left(len(root.name)) == root.name: modification.nodepath = modification.nodepath.substr(len(root.name)+1)
+					if root.has_node(modification.nodepath):
+						node_to_modify = root.get_node(modification.nodepath)
+					elif modification.nodepath.split("/")[0] == root.name:
+						node_to_modify = root.get_node("/".join(Array(modification.nodepath.split("/")).slice(1)))
+				
+				if node_to_modify == null:
+					# Try to create new node
+					var path_to_node = Array(modification.nodepath.split("/"))
+					node_to_modify = ClassDB.instantiate(modification.nodetype)
+					if node_to_modify == null:
+						push_error("[Codebot] Failed to create new node!")
+					else:
+						node_to_modify.name = path_to_node.back()
+						root.get_node("/".join(path_to_node.slice(0, -1))).add_child(node_to_modify)
+						node_to_modify.owner = root
+						print("[Codebot] New node " + node_to_modify.name + " created!")
+						await get_tree().process_frame
+				if node_to_modify != null:
+					var props = JSON.parse_string(modification.properties)
+					if props is Dictionary:
+						for key in props:
+							var value_type = type_string(typeof(node_to_modify.get(key)))
+							if props[key] is String:
+								var value = props[key]
+								if value.left(1) == "(": value = value_type + value
+								var result = str_to_var(value)
+								if typeof(result) == typeof(node_to_modify.get(key)):
+									node_to_modify.set.call_deferred(key, result)
+							elif props[key] is Dictionary:
+								var node_prop = node_to_modify.get(key)
+								for prop in props[key]:
+									node_prop[prop] = props[key][prop]
+								node_to_modify.set.call_deferred(key, node_prop)
+							else:
+								node_to_modify.set.call_deferred(key, props[key])
+						print("[Codebot] Modified node " + modification.nodepath + ", in scene " + modification.scenepath)
+				else:
+					push_error("[Codebot] Failed to modify node " + modification.nodepath + ", in scene " + modification.scenepath)
 		
 		conversation.append({
 			"role": "model",
@@ -423,6 +524,18 @@ func handle_query_response(data : Dictionary, reply : RichTextLabel) -> void:
 		reply.text = "Sorry. I can't seem to help with that right now."
 	
 	save_convo()
+
+
+## Creates any required directories for the given file to be created
+func create_directories(path : String) -> void:
+	if path.left(6) == "res://":
+		var scriptpath : Array = Array(path.substr(6).split("/"))
+		var fullpath = "res:/"
+		for dir in scriptpath: if !dir.contains("."):
+			fullpath += "/" + dir
+			print(fullpath)
+			if !DirAccess.dir_exists_absolute(fullpath):
+				DirAccess.make_dir_absolute(fullpath)
 
 
 ## Splits a parenthesisized string into an array of value
@@ -595,7 +708,6 @@ func _add_function(function : String) -> void:
 		var folds = editor.get_folded_lines()
 		var scroll = editor.scroll_vertical
 		editor.text += "\n\n" + function
-		edited_script.reload()
 		EditorInterface.get_resource_filesystem().update_file(edited_script_name)
 		for l in folds: editor.fold_line(l)
 		editor.scroll_vertical = scroll

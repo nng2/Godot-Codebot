@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://ifsf7ophrixo"]
+[gd_scene load_steps=7 format=3 uid="uid://ifsf7ophrixo"]
 
 [ext_resource type="PackedScene" uid="uid://gj81krdio0h4" path="res://addons/codebot/reply.tscn" id="1_crjgk"]
+[ext_resource type="Texture2D" uid="uid://byjyv1fgovbuu" path="res://addons/codebot/trash_icon.png" id="1_xf6la"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qq6ps"]
 content_margin_left = 8.0
@@ -82,3 +83,12 @@ theme_override_styles/read_only = SubResource("StyleBoxFlat_xf6la")
 placeholder_text = "What's wrong with this function?"
 wrap_mode = 1
 scroll_fit_content_height = true
+
+[node name="Clear" type="Button" parent="."]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 0
+tooltip_text = "Clear conversation"
+icon = ExtResource("1_xf6la")
+expand_icon = true
