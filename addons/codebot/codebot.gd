@@ -5,7 +5,7 @@ extends EditorPlugin
 
 
 ## API URL
-const URL := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent"
+const URL := "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 ## Codebot conversation
 var conversation := []
@@ -299,6 +299,8 @@ func make_query(query : String, add_chat : bool = true) -> void:
 			},
 			"required": ["text"]
 		}
+	var contents = conversation.duplicate()
+	contents.back().parts[0].text += "\n\nHere are the details about my project: " + project_description
 	var data := {
 		"system_instruction": {
 			"parts": [{
@@ -306,10 +308,10 @@ func make_query(query : String, add_chat : bool = true) -> void:
 				You are a GDscript expert responding to queries regarding Godot 4.
 				Your name is Codebot and your purpose is to help users debug code and solve other challenges that may present themselves during development.
 				Look at the currently edited scene/script of the user first if they ask for help as they'll likely be needed help on something they're currently working on.
-				Here is a JSON.stringified description of the user's project, scenes and scripts are {filename : filecontents} pairs:\n\n" + project_description
+				The most recent user message will include a JSON object containing details about the user's project, scenes, and scripts. Scenes and scripts are stored in {filename : filecontents} pairs."
 			}]
 		},
-		"contents": conversation,
+		"contents": contents,
 		"generationConfig": {
 			"responseMimeType": "application/json",
 			"responseSchema": schema,
@@ -754,7 +756,7 @@ func examine_requested(args) -> void:
 func debug_request_submitted(request : String, selected_text : String) -> void:
 	free_inline_prompt(InputEventMouseButton.new())
 	response_action = 1
-	make_query("I need help debugging the following code. " + request + " Please return only a code snippet I can directly replace my current snippet with.\n\nHere is the code I'm working on:\n\n" + selected_text, false)
+	make_query("I need help debugging the following code:\n\n'" + selected_text + "'\n\n" + request + " Please return code that I can directly replace the code I'm working with without changing anything else about the script.", false)
 	
 	var edited_script := EditorInterface.get_script_editor().get_current_script()
 	var editor : CodeEdit = EditorInterface.get_script_editor().get_current_editor().get_base_editor()
