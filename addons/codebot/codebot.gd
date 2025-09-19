@@ -533,7 +533,6 @@ func create_directories(path : String) -> void:
 		var fullpath = "res:/"
 		for dir in scriptpath: if !dir.contains("."):
 			fullpath += "/" + dir
-			print(fullpath)
 			if !DirAccess.dir_exists_absolute(fullpath):
 				DirAccess.make_dir_absolute(fullpath)
 
